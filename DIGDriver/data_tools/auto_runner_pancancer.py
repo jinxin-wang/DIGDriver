@@ -73,8 +73,9 @@ try:
     )
 
     DIG_auto.run(dig_args)
+    
 except:
     print("Unexpected error:")
     traceback.print_exc()
-    print('failed' + c)
+    print('failed')
     print('skipping...')
