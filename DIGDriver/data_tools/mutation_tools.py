@@ -6,7 +6,8 @@ import gzip
 
 ##deprecated by restrict_mutations_by_bed_efficient
 def restrict_mutations_by_bed(df_mut, df_bed, unique=True, remove_X=True, replace_cols=False):
-    """ Restrict mutations to only those that overlap elements in a bed file.
+    """ 
+    Restrict mutations to only those that overlap elements in a bed file.
     """
     # df_mut = pd.read_table(f_mut, header=None, low_memory=False)
     # df_bed = pd.read_table(f_bed, header=None, low_memory=False)
@@ -30,7 +31,8 @@ def restrict_mutations_by_bed(df_mut, df_bed, unique=True, remove_X=True, replac
     return df_inter
 
 def restrict_mutations_by_bed_efficient(f_mut, f_bed, bed12=False, drop_duplicates=False, drop_sex=False, replace_cols=False):
-    """ Restrict mutations to only those that overlap elements in a bed file.
+    """ 
+    Restrict mutations to only those that overlap elements in a bed file.
     """
     bed_mut = pybedtools.BedTool(f_mut)
     bed_bed = pybedtools.BedTool(f_bed)
@@ -43,6 +45,10 @@ def restrict_mutations_by_bed_efficient(f_mut, f_bed, bed12=False, drop_duplicat
     return df_mut
 
 def read_mutation_file(path, drop_sex=True, drop_duplicates=False, unique_indels=True):
+    """
+    A utility function to read mutation files, either as plain text or gzipped. 
+    It dynamically detects the number of columns and their types to create a DataFrame.
+    """
     # cols = ['CHROM', 'START', 'END', 'REF', 'ALT', 'SAMPLE', 'ANNOT', 'MUT_TYPE', 'CONTEXT']
     try:
         with open(path) as f:
@@ -105,10 +111,16 @@ def read_mutation_file(path, drop_sex=True, drop_duplicates=False, unique_indels
 
 
 def drop_duplicate_mutations(df_mut):
+    """
+    Removes duplicate mutations based on chromosome, start position, end position, reference allele, alternate allele, and sample ID.
+    """
     df_dedup = df_mut.drop_duplicates(['CHROM', 'START', 'END', 'REF', 'ALT', 'SAMPLE'])
     return df_dedup
 
 def get_unique_indels(df_mut):
+    """
+    Separates indel mutations from SNVs, removes duplicates from indels, and then combines them back with SNVs.
+    """
     df_indel = df_mut[df_mut.ANNOT == 'INDEL']
     df_snv = df_mut[df_mut.ANNOT != 'INDEL']
 
@@ -117,6 +129,9 @@ def get_unique_indels(df_mut):
     return pd.concat([df_snv, df_indel])
 
 def tabulate_nonc_mutations_split(f_nonc_bed, f_mut):
+    """
+    Computes mutation counts per genomic element (splitting multi-block elements into separate rows) and returns summary statistics.
+    """
     try:
         # df_nonc = pd.read_csv(f_nonc_bed, sep= '\t', header=None, low_memory = False,
         # names=None)
@@ -157,6 +172,10 @@ def tabulate_mutations_in_element(f_mut, f_elt_bed, bed12=False, drop_duplicates
     df_cnt = tabulate_muts_per_sample_per_element(f_mut, f_elt_bed, bed12=bed12, drop_duplicates=drop_duplicates)
     df_cnt.rename({'SAMPLE': 'OBS_SAMPLES'}, axis=1, inplace=True)
 
+    """
+    Counts mutations within elements (e.g., genes or regulatory regions) and returns summary statistics.
+    """
+
     # Remove hypermutated samples and cap total mutations from a sample in an element
     # *if there are any samples
     if len(df_cnt) > 0:
@@ -189,6 +208,10 @@ def tabulate_mutations_in_element(f_mut, f_elt_bed, bed12=False, drop_duplicates
         return df_summary[['OBS_SAMPLES', 'OBS_SNV', 'OBS_INDEL']]
 
 def tabulate_muts_per_sample_per_element(f_mut, f_elt_bed, bed12=False, drop_duplicates=False, unique_indels=True):
+    """
+    Counts mutations per sample within each element and returns the count for SNVs and INDELs separately.
+    """
+
     ## Convert dataframes to bedtools objects
     bed_mut = pybedtools.BedTool(f_mut)
     bed_elt = pybedtools.BedTool(f_elt_bed)
@@ -276,6 +299,9 @@ def tabulate_nonc_mutations_at_sites(f_sites, f_mut, return_sites = False):
 
 #wrapper for transfer learning model on sites
 def tabulate_sites_in_element(f_sites, f_mut):
+    """
+    A wrapper for tabulate_nonc_mutations_at_sites to count mutations at sites within genomic elements
+    """
     df_res = tabulate_nonc_mutations_at_sites(f_sites, f_mut)
     df_res = df_res.set_index('ELT')
     return df_res[['OBS_SAMPLES', 'OBS_SNV']]
@@ -291,7 +317,8 @@ def _genic_fill_empty_cols(df_gene_counts):
         df_gene_counts[c] = 0
 
 def filter_hypermut_samples(df_mut, max_muts_per_sample, return_blacklist=False):
-    """ Remove samples that have more mutations than the specified threshold
+    """ 
+    Remove samples that have more mutations than the specified threshold
     """
     sample_cnt = df_mut.SAMPLE.value_counts()
     samples_blacklist = sample_cnt[sample_cnt > max_muts_per_sample].index.to_list()
@@ -304,7 +331,8 @@ def filter_hypermut_samples(df_mut, max_muts_per_sample, return_blacklist=False)
     return df_whitelist
 
 def filter_samples_by_stdev(df_mut, stdev_cutoff):
-    """ Remove samples where # mutations > stdev_cutoff*stdev of cohort mutation counts
+    """ 
+    Remove samples where # mutations > stdev_cutoff*stdev of cohort mutation counts
     """
     sample_cnt = df_mut.SAMPLE.value_counts()
     stdev = sample_cnt.std()
@@ -316,7 +344,8 @@ def filter_samples_by_stdev(df_mut, stdev_cutoff):
     return df_whitelist
 
 def cap_muts_per_element_per_sample(df_mut_elt_samp, max_muts_per_elt_per_sample):
-    """ Upper-bound number of mutations any one sample can contribute to an element
+    """ 
+    Upper-bound number of mutations any one sample can contribute to an element
 
     Args:
         df_mut_elt_samp     dataframe produced by tabulate_muts_per_sample_per_element
@@ -327,7 +356,8 @@ def cap_muts_per_element_per_sample(df_mut_elt_samp, max_muts_per_elt_per_sample
     return df_mut_elt_samp
 
 def mutations_per_gene(df_mut_cds, max_muts_per_gene_per_sample=3e9):
-    """ Count the number of mutations per gene in a mutation dataframe
+    """ 
+    Count the number of mutations per gene in a mutation dataframe
     """
     # df_counts = pd.crosstab(df_mut_cds.GENE, df_mut_cds.ANNOT)
     df_group = df_mut_cds.groupby(['GENE', 'SAMPLE', 'ANNOT']).size().reset_index(name='COUNT')
@@ -361,7 +391,9 @@ def mutations_per_gene(df_mut_cds, max_muts_per_gene_per_sample=3e9):
     return df_counts
 
 def mutations_by_element(f_mut, f_elt_bed, bed12=False, drop_duplicates=False):
-    """ Get all mutations falling within a set of elements
+    """ 
+    Get all mutations falling within a set of elements
+    Retrieves mutations within genomic elements defined by a BED file
     """
     bed_mut = pybedtools.BedTool(f_mut)
     bed_elt = pybedtools.BedTool(f_elt_bed)
@@ -381,6 +413,9 @@ def mutations_by_element(f_mut, f_elt_bed, bed12=False, drop_duplicates=False):
     return df_hits
 
 def bed12_boundaries(f_bed):
+    """
+    Processes BED12 files to extract the boundaries of each element
+    """
     df_nonc = pd.read_table(f_bed, names=['CHROM', 'START', 'END', "ELT", "SCORE", "STRAND", 'thickStart', 'thickEnd', 'rgb', 'blockCount', 'blockSizes', 'blockStarts'], low_memory=False)
     df_nonc.CHROM = df_nonc.CHROM.astype(str)
     df_nonc.blockSizes = df_nonc.blockSizes.astype(str)

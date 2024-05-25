@@ -9,15 +9,25 @@ from DIGDriver.data_tools import mutation_tools
 from DIGDriver.sequence_model import nb_model
 
 def load_pretrained_model(h5, key='genic_model', restrict_cols=True):
-    """ Load a pretrained gene model
+    """ 
+    The load_pretrained_model function is designed to load a pretrained gene model from an HDF5 file and 
+    perform necessary preprocessing to prepare the data for further analysis. 
     """
     ## TODO: THIS WILL NEED UPDATING WHEN THE PRETRAINED MODULE IS FINALIZED
     df_pretrain = pd.read_hdf(h5, key)
 
+    # Compute Parameters for Gamma Distribution
+    # The function calculates parameters alpha and theta for the Gamma distribution using the mean (MU) and 
+    # standard deviation (SIGMA) columns. It then adds these parameters as new columns to the DataFrame.
     alpha, theta = nb_model.normal_params_to_gamma(df_pretrain.MU, df_pretrain.SIGMA)
     df_pretrain['ALPHA'] = alpha
     df_pretrain['THETA'] = theta
 
+    # Preprocessing Based on the Key 
+    # 1. Sets the index of the DataFrame to the GENE column.
+    # 2. Renames columns related to probabilities for better readability.
+    # 3. Computes the nonsynonymous probability (Pi_NONSYN) as the sum of missense (Pi_MIS) and truncating (Pi_TRUNC) probabilities.
+    # 4. Calculates ALPHA_INDEL and THETA_INDEL for the Gamma distribution using MU_INDEL and SIGMA_INDEL.
     if key == 'genic_model':
         df_pretrain.set_index(df_pretrain.GENE, inplace=True)
         ## Rename "P" columns (should do this at pretraining level!)
@@ -38,6 +48,9 @@ def load_pretrained_model(h5, key='genic_model', restrict_cols=True):
         df_pretrain['THETA_INDEL'] = theta_ind
 
     elif 'P_INDEL' in df_pretrain.columns:
+        # Sets the index of the DataFrame to the ELT column.
+        # Renames columns P_SUM and P_INDEL.
+        # Calculates ALPHA_INDEL and THETA_INDEL.
         df_pretrain.set_index(df_pretrain.ELT, inplace=True)
         df_pretrain.rename({'P_SUM': 'Pi_SUM',
                             'P_INDEL': 'Pi_INDEL',
@@ -54,6 +67,7 @@ def load_pretrained_model(h5, key='genic_model', restrict_cols=True):
         )
 
     if restrict_cols:
+        # Restricts the DataFrame to a specific set of columns based on the key and presence of certain columns ('Pi_INDEL').
         if key == 'genic_model':
             cols = ['CHROM', 'GENE_LENGTH', 'R_SIZE', 'R_OBS', 'R_INDEL',
                     'MU', 'SIGMA', 'ALPHA', 'THETA',
@@ -76,7 +90,8 @@ def load_pretrained_model(h5, key='genic_model', restrict_cols=True):
     return df_pretrain
 
 def read_mutations_cds(f_mut, f_cds=None):
-    """ Read mutations from a WES cohort annotated by DIGPreprocess
+    """ 
+    Read mutations from a WES cohort annotated by DIGPreprocess
     """
     # df_bed['LENGTH'] = df_bed.END - df_bed.START
     df_mut = mutation_tools.read_mutation_file(f_mut, drop_duplicates=False, drop_sex=True)
@@ -92,7 +107,14 @@ def read_mutations_cds(f_mut, f_cds=None):
     return df_mut_cds
 
 def calc_scale_factor(df_mut, h5_pretrain, scale_type='genome'):
-    """ General purpose function to calculate cohort scaling factor
+    """ 
+    General purpose function to calculate cohort scaling factor
+
+    The read_mutations_cds function is designed to read and filter mutation data from a whole-exome sequencing (WES) 
+    cohort that has been annotated by the DIGPreprocess tool. It filters the mutations to include only those that 
+    are in coding sequences (CDS).
+
+    :param scale_type: 'genome'|'exome'|'sample'
     """
     df_dedup = mutation_tools.drop_duplicate_mutations(df_mut)
 
@@ -127,7 +149,8 @@ def calc_scale_factor(df_mut, h5_pretrain, scale_type='genome'):
             raise ValueError("scale_type {} is not recognized".format(scale_type))
 
 def calc_scale_factor_efficient(f_mut, h5_pretrain, scale_type='genome'):
-    """ General purpose function to calculate cohort scaling factor
+    """ 
+    General purpose function to calculate cohort scaling factor
     """
     # df_dedup = mutation_tools.drop_duplicate_mutations(df_mut)
 
@@ -270,7 +293,8 @@ def transfer_gene_model(df_mut_cds, df_counts, df_pretrain, cj):
     return df_model
 
 def transfer_element_model_with_indels(df_mut_tab, df_pretrain, cj, use_chrom=False):
-    """ Transfer a pretrained gene model to a new cohort
+    """ 
+    Transfer a pretrained gene model to a new cohort
 
     Args:
         df_mut_tab:     dataframe of mutations tabulated by element
@@ -302,7 +326,8 @@ def transfer_element_model_with_indels(df_mut_tab, df_pretrain, cj, use_chrom=Fa
     return df_model
 
 def transfer_element_model(df_mut_tab, df_pretrain, cj, use_chrom=False):
-    """ Transfer a pretrained gene model to a new cohort
+    """ 
+    Transfer a pretrained gene model to a new cohort
 
     Args:
         df_mut_tab:     dataframe of mutations tabulated by element
@@ -329,7 +354,8 @@ def transfer_element_model(df_mut_tab, df_pretrain, cj, use_chrom=False):
     return df_model
 
 def gene_expected_muts_nb(df_model):
-    """ Calculated expected mutations in genes based on transferred NB model
+    """ 
+    Calculated expected mutations in genes based on transferred NB model
     """
     df_model['EXP_SYN']    = df_model.ALPHA * df_model.THETA * df_model.Pi_SYN
     df_model['EXP_MIS']    = df_model.ALPHA * df_model.THETA * df_model.Pi_MIS
@@ -361,7 +387,8 @@ def element_expected_muts_nb(df_model):
     #         return N_SAMP / OBS_MUT
 
 def gene_expected_muts_dnds(df_model):
-    """ Calculate expected mutations in genes using dNdS correction
+    """ 
+    Calculate expected mutations in genes using dNdS correction
     """
     ## Baseline expected mutations from transfer model
     df_model['EXP_SYN']    = df_model.ALPHA * df_model.THETA * df_model.Pi_SYN
@@ -392,7 +419,8 @@ def gene_expected_muts_dnds(df_model):
     return df_model
 
 def gene_pvalue_burden_nb(df_model):
-    """ Calculate burden P-values based on the transfered NB model params
+    """ 
+    Calculate burden P-values based on the transfered NB model params
     """
 
     # PVAL_SYN, PVAL_MIS, PVAL_NONS, PVAL_SPL, PVAL_TRUNC, PVAL_NONSYN = [], [], [], [], [], []
@@ -456,7 +484,8 @@ def gene_pvalue_burden_nb(df_model):
     return df_model
 
 def element_pvalue_burden_nb_DEPRECATED(df_model):
-    """ Calculate burden P-values based on the transfered NB model params
+    """ 
+    Calculate burden P-values based on the transfered NB model params
     """
 
     PVAL_SNV = []
@@ -471,7 +500,8 @@ def element_pvalue_burden_nb_DEPRECATED(df_model):
     return df_model
 
 def element_pvalue_burden_nb(df_model):
-    """ Calculate burden P-values based on the transfered NB model params
+    """ 
+    Calculate burden P-values based on the transfered NB model params
     """
     df_model['PVAL_SNV_BURDEN'] = nb_model.nb_pvalue_greater_midp(
         df_model.OBS_SNV,
@@ -482,8 +512,9 @@ def element_pvalue_burden_nb(df_model):
     return df_model
 
 def gene_pvalue_burden_nb_by_sample(df_model):
-    """ Calculate burden P-values based on the transfered NB model params.
-        Test based only on the number of *mutated* samples per gene
+    """ 
+    Calculate burden P-values based on the transfered NB model params.
+    Test based only on the number of *mutated* samples per gene
     """
 
     # def _calc_sample_scale(OBS_MUT, N_SAMP):
@@ -592,8 +623,9 @@ def gene_pvalue_burden_nb_by_sample(df_model):
     return df_model
 
 def element_pvalue_burden_nb_by_sample(df_model):
-    """ Calculate burden P-values based on the transfered NB model params.
-        Test based only on the number of *mutated* samples per gene
+    """ 
+    Calculate burden P-values based on the transfered NB model params.
+    Test based only on the number of *mutated* samples per gene
     """
 
     # PVAL_MUT = []
@@ -615,7 +647,8 @@ def element_pvalue_burden_nb_by_sample(df_model):
     return df_model
 
 def gene_pvalue_burden_dnds(df_model):
-    """ Calculate burden P-values based on the dnds-corrected expected values
+    """ 
+    Calculate burden P-values based on the dnds-corrected expected values
     """
 
     PVAL_SYN, PVAL_MIS, PVAL_NONS, PVAL_SPL, PVAL_TRUNC, PVAL_NONSYN = [], [], [], [], [], []
@@ -655,8 +688,9 @@ def gene_pvalue_burden_dnds(df_model):
     return df_model
 
 def gene_pvalue_sel_nb(df_model):
-    """ Calculate dNdS selection p-values using a conservative NB model
-        (NB model integrates over uncertainty in the rate estimate)
+    """ 
+    Calculate dNdS selection p-values using a conservative NB model
+    (NB model integrates over uncertainty in the rate estimate)
     """
     PVAL_SYN, PVAL_MIS, PVAL_TRUNC, PVAL_NONSYN = [], [], [], []
     for i, row in df_model.iterrows():
@@ -676,6 +710,9 @@ def gene_pvalue_sel_nb(df_model):
     return df_model
 
 def gene_pvalue_indel_by_transfer(df_model):
+    """ 
+    Calculate dNdS selection p-values using a conservative NB model
+    """
     ## Length of genes
     df_cds = pd.read_table(
         pkg_resources.resource_filename('DIGDriver', 'data/dndscv_gene_cds.bed.gz'),
@@ -747,7 +784,8 @@ def element_pvalue_indel(df_model, t_indel):
     return df_model
 
 def gene_pvalue_sel_gamma(df_model):
-    """ Calculate dNdS selection p-values using a more aggressive gamma-poisson model
+    """ 
+    Calculate dNdS selection p-values using a more aggressive gamma-poisson model
     """
     PVAL_SYN, PVAL_MIS, PVAL_NONS, PVAL_NONSYN = [], [], [], []
     for i, row in df_model.iterrows():
@@ -788,7 +826,8 @@ def annotate_known_genes(df, key='GENE'):
 # def run_gene_model(f_mut, f_h5_genemodel, f_cds, pval_burden_nb=True, pval_burden_dnds=True, pval_sel=True, scale_by_sample=False):
 def run_gene_model(f_mut, f_h5_genemodel, scale_by_sample=False, pval_burden_nb=True, pval_burden_dnds=True, pval_sel=True,
     max_muts_per_sample=3e9, max_muts_per_gene_per_sample=3e9, scale_factor=None, scale_by_expectation=True, cgc_genes=False):
-    """ Run a gene transfer model
+    """ 
+    Run a gene transfer model
     """
     ## 1. Transfer model parameters from pretrained model to new CDS cohort
     df_pretrain = load_pretrained_model(f_h5_genemodel, restrict_cols=True)
@@ -875,7 +914,8 @@ def run_gene_model(f_mut, f_h5_genemodel, scale_by_sample=False, pval_burden_nb=
 
 def run_target_model(f_mut, f_h5_genemodel, scale_by_sample=False, panel="MSK_341",
     max_muts_per_sample=3e9, max_muts_per_gene_per_sample=3e9, drop_synonymous=True, cgc_genes=False, scale_factor=None):
-    """ Analyze MSK-IMPACT genes with a pretrained gene model
+    """ 
+    Analyze MSK-IMPACT genes with a pretrained gene model
     """
     ## 0. Load genes in panel
     print(panel)
@@ -968,7 +1008,8 @@ def run_target_model(f_mut, f_h5_genemodel, scale_by_sample=False, panel="MSK_34
 
 def run_element_region_model(f_mut, f_bed, f_h5_pretrain, pretrain_key, scale_factor=None, scale_factor_indel=None, scale_type="genome",
     scale_by_expectation=True, max_muts_per_sample=3e9, max_muts_per_elt_per_sample=3e9, skip_pvals=False):
-    """ Run a model based on an arbitrary, user-defined set of regions
+    """ 
+    Run a model based on an arbitrary, user-defined set of regions
 
     Args:
         f_mut: path to mutation file
@@ -1096,7 +1137,8 @@ def run_element_region_model(f_mut, f_bed, f_h5_pretrain, pretrain_key, scale_fa
 
 
 def run_sites_region_model(f_mut, f_sites, f_h5_pretrain, pretrain_key, scale_factor=None, scale_type="genome", scale_by_expectation=True):
-    """ Run a model based on an arbitrary, user-defined set of regions and a arbitrary set of sites of interest within those regions
+    """ 
+    Run a model based on an arbitrary, user-defined set of regions and a arbitrary set of sites of interest within those regions
 
     Args:
         f_mut: path to mutation file

@@ -28,8 +28,16 @@ def region_str_to_params(region_str):
 def DIG_onthefly(f_pretrained, f_mut, f_fasta, f_elts_bed=None, region_str=None,
 scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expectation=True,
  max_muts_per_sample=3e9, max_muts_per_elt_per_sample=3e9, skip_pvals=False):
+    """
+    The DIG_onthefly function analyzes genomic mutation data, performing tasks such as tabulating mutations, 
+    scaling by expected mutation counts, counting sequence contexts, calculating mutation probabilities, 
+    and ultimately computing various statistical measures on the mutation data. 
+    """
+    # Initial Assertions and Parameters Parsing
     assert f_elts_bed or region_str, "ERROR: you must provide --f-bed or --region_str."
 
+    # 2. Region String Handling
+    # If a region string is provided, it's converted into a BED format and saved temporarily: 
     if region_str:
         temp_file, temp_name = tempfile.mkstemp()
 
@@ -38,10 +46,16 @@ scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expect
         os.close(temp_file)
         f_elts_bed = temp_name
 
+    # 3. Mutation Tabulation
+    # Mutations are tabulated for the specified genomic regions using 
+    # mutation_tools.tabulate_mutations_in_element
     print('Tabulating mutations')
     df_mut_tab, blacklist = mutation_tools.tabulate_mutations_in_element(f_mut, f_elts_bed, bed12=True, drop_duplicates=True, all_elements = True,
         max_muts_per_sample=max_muts_per_sample, max_muts_per_elt_per_sample=max_muts_per_elt_per_sample, return_blacklist=True
     )
+
+    # 4. Scaling by Expected Mutations
+    # If scale_by_expectation is enabled, scaling factors are calculated:
     if scale_by_expectation:
         print('scaling by expected number of mutations')
         df_gene = transfer_tools.load_pretrained_model(f_pretrained)
@@ -67,9 +81,9 @@ scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expect
         print('Calculating scale factor')
         cj, cj_indel = transfer_tools.calc_scale_factor_efficient(f_mut, f_pretrained, scale_type=scale_type)
 
+    # 5. Context Precounting
     L_contexts = sequence_tools.precount_region_contexts_parallel(
         f_elts_bed, f_fasta, 10, 10000, sub_elts = True, n_up=1, n_down=1)
-
 
     all_windows_df = pd.read_hdf(f_pretrained, 'region_params')
     window = all_windows_df.iloc[0][2]-all_windows_df.iloc[0][1]
@@ -85,6 +99,8 @@ scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expect
     d_pr = pd.DataFrame(df_mut.FREQ.values, mut_model_idx)
     d_pr = d_pr.sort_index()[0].values
 
+    # 6. Mutation Probability Calculation
+    # Mutation probabilities and other statistical parameters are calculated for each element in the BED file
     df_elts = mutation_tools.bed12_boundaries(f_elts_bed)
 
 
@@ -120,7 +136,7 @@ scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expect
         region_df = sequence_tools.count_contexts_by_regions(f_fasta, chrom_lst, start_lst, end_lst, n_up=1, n_down=1)
         region_counts = np.array([np.repeat(region, 3) for region in region_df.values]).sum(axis=0)
 
-#         #if negative strand, take the reverse complement of the region counts
+        # if negative strand, take the reverse complement of the region counts
         if strand == '-1' or strand == '-':
             region_counts = np.array([r[1] for r in sorted(enumerate(region_counts), key=lambda k: revc_dic[subst_idx[k[0]]])])
 
@@ -163,7 +179,7 @@ scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expect
         alpha_lst.append(alpha)
         theta_lst.append(theta)
 
-
+    # 7. Data Aggregation and Statistical Testing
     pretrain_df = pd.DataFrame({'ELT_SIZE':elt_len_lst, 'FLAG': flag_lst, 'R_SIZE':R_size_lst, 'R_OBS':R_obs_lst, 'R_INDEL':R_ind_lst,
                      'MU':mu_lst, 'SIGMA':sigma_lst, 'ALPHA':alpha_lst, 'THETA':theta_lst,
                      'MU_INDEL': mu_ind_lst, 'SIGMA_INDEL':sigma_ind_lst, 'ALPHA_INDEL':alpha_ind_lst, 'THETA_INDEL':theta_ind_lst,
@@ -187,4 +203,5 @@ scale_factor=None, scale_factor_indel=None, scale_type="genome", scale_by_expect
                 ]
     if region_str:
         os.remove(temp_name)
+
     return df_model

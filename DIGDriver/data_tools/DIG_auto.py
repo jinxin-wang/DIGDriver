@@ -7,14 +7,20 @@ from pathlib import Path
 from multiprocessing.pool import Pool
 import h5py
 
-sys.path.append('../data_tools/')
-sys.path.append('../region_model/')
-sys.path.append('../sequence_model/')
-import DataExtractor
-import kfold_mutations_main
-import SequenceModel
-import GenicDriver
+# sys.path.append('../data_tools/')
+# sys.path.append('../region_model/')
+# sys.path.append('../sequence_model/')
+# import DataExtractor
+# import kfold_mutations_main
+# import SequenceModel
+# import GenicDriver
 
+import scripts.DataExtractor as DataExtractor
+import scripts.DigPreprocess as SequenceModel
+
+import region_model.kfold_mutations_main as kfold_mutations_main
+
+from sequence_model.genic_driver_tools import GenicDriver
 
 def parse_args(text=None):
     parser = argparse.ArgumentParser(description="Automation tool for running DIG pipeline")
@@ -58,12 +64,42 @@ def parse_args(text=None):
 
 
 def run(args):
+    """
+    The run function orchestrates several steps in your pipeline. Here's an overview of what it does:
+
+    1. Checking Input Directories: 
+        - It checks if the required input directories (epi_dir or epi_matrix_dir) are provided. If not, it raises an error.
+
+    2. Creating Mappability File and Split Index:
+        - If the epi_matrix_dir is not provided, it creates a mappability file (mapp_file_path) if not already provided and then proceeds to create a split index for data processing.
+        - It then creates matrix chunks for processing.
+        - After processing, it concatenates the chunks and adds a mappability track.
+    3. Running NN Model:
+        - If the epi_matrix_dir is not provided, it runs the neural network model (kfold_mutations_main) using the specified arguments.
+        - It then sets the path for the resulting model.
+    4. Checking for Existing Genome Counts:
+        - If the fmodel_dir is not provided, it creates the genome context frequency file (f_model_path) if not already provided.
+        - It checks if the mutation counts exist in the model. If not, it proceeds to annotate and count mutations.
+    5. Running Models:
+        - It runs sequence models (genicDetectParallel and noncDetectParallel) using the specified arguments.
+    6. Concatenating Sequence Results:
+        - It concatenates sequence model results into HDF5 files.
+    7. Logging:
+        - It logs the progress of the process.
+
+    Overall, this function handles the preprocessing, model training, and result aggregation steps of your pipeline
+    """
+    # Checking Input Directories: 
+    # It checks if the required input directories (epi_dir or epi_matrix_dir) are provided. If not, it raises an error.
     if args.gp_res is None:
         if args.epi_matrix_dir is None:
             if args.epi_dir is None:
                 print('Error: need to provide either a epi_track dir or a epi_matrix_dir')
                 return
             else:
+                # Creating Mappability File and Split Index:
+                # If the epi_matrix_dir is not provided, 
+                # it creates a mappability file (mapp_file_path) 
                 map_file_name = "high_mapp_{}_{}_{}".format(args.min_mapp, args.window, 0)
                 mapp_file_path = os.path.join(args.out_dir, map_file_name)
                 if args.map_file is None:
@@ -72,6 +108,7 @@ def run(args):
                     DataExtractor.mappability(mapp_args)
                     print('map file saved at: ' + mapp_file_path)
 
+                # create a split index for data processing
                 print('creating split index...')
 
                 if args.split_dir is None:
@@ -84,6 +121,7 @@ def run(args):
                 else:
                     split_path = args.split_dir
 
+                # then creates matrix chunks for processing.
                 print('creating matrix chunks...')
                 chunks_path = os.path.join(args.out_dir, 'matrix_chunks_{}'.format(args.window))
                 print(chunks_path)
@@ -99,7 +137,7 @@ def run(args):
                 p.join()
                 _ = [r.get() for r in res]
                 print('chunks saved')
-
+                # concatenates the chunks and adds a mappability track.
                 print('concatenating chunks...')
                 concat_args = DataExtractor.parse_args('concatH5 {} --out-dir {}'.format(chunks_path, args.out_dir))
                 DataExtractor.concatH5(concat_args)
@@ -154,15 +192,15 @@ def run(args):
     print('running models')
     submap_path = gp_results_base.split('gp_results')[0] + 'sub_mapp_results_fold_{}.h5'
 
-#    for fold in range(5):
-#        apply_seq_args = SequenceModel.parse_args('applySequenceModel {} {} {} {} {} --cancer {} --key-prefix {} --key {} --n-procs {} --bins {} --run ensemble'.format(gp_results_base.format(fold), f_model_path, annot_path, args.ref_file, args.window, args.cancer_key, args.cancer_key, args.cancer_key, args.n_procs, 50))
-#        SequenceModel.applySequenceModel(apply_seq_args)
+    #    for fold in range(5):
+    #        apply_seq_args = SequenceModel.parse_args('applySequenceModel {} {} {} {} {} --cancer {} --key-prefix {} --key {} --n-procs {} --bins {} --run ensemble'.format(gp_results_base.format(fold), f_model_path, annot_path, args.ref_file, args.window, args.cancer_key, args.cancer_key, args.cancer_key, args.n_procs, 50))
+    #        SequenceModel.applySequenceModel(apply_seq_args)
 
     results_path = os.path.join(args.out_dir, 'results')
     if not os.path.exists(results_path):
         os.mkdir(results_path)
 
-#    concat_sequence_results(gp_results_base, args.cancer_key, os.path.join(results_path, 'hotspot_results_{}.h5'.format(args.cancer_key)))
+    #    concat_sequence_results(gp_results_base, args.cancer_key, os.path.join(results_path, 'hotspot_results_{}.h5'.format(args.cancer_key)))
     genic_out = os.path.join(results_path, 'genicDetect_{}_{}_{}.h5'.format(args.cancer_key, args.window, args.min_mapp))
 
     genic_args = GenicDriver.parse_args('genicDetectParallel {} {} {} {} -c {} -N {} -m {} -u {}'.format(annot_path, gp_results_base, f_model_path, genic_out, args.cancer_key, args.n_procs, args.min_mapp, submap_path))
@@ -183,21 +221,60 @@ def chunk_runner(f, chunks_path, ref_file, epi_dir, mut_file, window, cancer_key
     DataExtractor.create_chunk(chunk_args)
 
 def concat_sequence_results(base_results, cancer, out_path):
+    """
+    Concatenates sequence model results from multiple cross-validation folds into a single HDF5 file.
+
+    Args:
+        base_results (str): Base path pattern to the results files with placeholders for fold numbers.
+        cancer (str): Cancer type key to identify results.
+        out_path (str): Output path for the concatenated results HDF5 file.
+    """
+    # Open the output HDF5 file in append mode
     fout = h5py.File(out_path, 'a')
-    #keys = [k for k in f[cancer]['test'].keys() if 'nb_model' in k]
+
+    # List of keys to look for in the HDF5 files (can be modified to dynamically get keys if needed)
     keys = ['nb_model_up1_down1_binsize50_run_ensemble']
-    if len(keys) ==0:
+
+    # Check if the keys list is empty
+    if len(keys) == 0:
+        fout.close()
         return -1
+
+    # Loop over each key to process
     for k in keys:
-        print('working on {}'.format(k))
-        df_lst = []
+        print('Working on {}'.format(k))
+        df_lst = []  # List to hold dataframes from each fold
+
+        # Loop over each fold (assuming 5 folds)
         for run in range(5):
+            # Read the HDF5 file for the current fold
             run_res = pd.read_hdf(base_results.format(run), key='{}/test/{}'.format(cancer, k))
-            run_res = run_res.astype({'CHROM': 'int32', 'POS': 'float64', 'OBS': 'int32', 'EXP': 'float64','PVAL': 'float64','Pi': 'float64','MU': 'float64','SIGMA': 'float64','REGION': 'object'})
+
+            # Ensure the correct data types for each column
+            run_res = run_res.astype({
+                'CHROM': 'int32',
+                'POS': 'float64',
+                'OBS': 'int32',
+                'EXP': 'float64',
+                'PVAL': 'float64',
+                'Pi': 'float64',
+                'MU': 'float64',
+                'SIGMA': 'float64',
+                'REGION': 'object'
+            })
+
+            # Append the dataframe to the list
             df_lst.append(run_res)
+
+        # Concatenate all dataframes for the current key
         complete = pd.concat(df_lst)
-        complete.to_hdf(out_path, key = k, format='fixed')
+
+        # Save the concatenated dataframe to the output HDF5 file
+        complete.to_hdf(out_path, key=k, format='fixed')
+
+    # Close the output HDF5 file
     fout.close()
+
 
 if __name__ == '__main__':
     main()

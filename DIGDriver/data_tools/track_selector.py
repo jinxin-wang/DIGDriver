@@ -25,6 +25,18 @@ def get_cmd_arguments():
     return ap.parse_args()
 
 def main():
+    """
+    The main function performs the following tasks:
+        1. Parses command-line arguments.
+        2. Reads metadata and a list of track identifiers.
+        3. Matches and filters tracks based on specified anatomical categories and other criteria.
+        4. Outputs the filtered list of track positions to a file.
+
+    The function is designed to filter and select tracks from a larger dataset based on 
+    various anatomical categories and criteria specified via command-line arguments. 
+    It reads the necessary metadata, matches tracks, accumulates relevant indices, and 
+    outputs the filtered list to a file.
+    """
     args = get_cmd_arguments()
     meta = pd.read_csv(open('/scratch1/priebeo/neurIPS/new_tracks_meta.csv', 'r'))
     track_lst = pkl.load(open(args.track_lst_path, 'rb'))
