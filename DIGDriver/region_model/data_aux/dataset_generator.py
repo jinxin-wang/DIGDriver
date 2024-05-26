@@ -7,7 +7,6 @@ import math
 
 from mut_dataset import *
 
-
 class BaseDatasetGenerator:
     predictor_ds_id = 'x_data'
     index_ds_id = 'idx'
@@ -18,16 +17,40 @@ class BaseDatasetGenerator:
         self.file_path = args.data_file
         self.label_ids = args.label_ids
         self.val_ratio = args.val_ratio
+
         self.autoregressive_size = args.autoregressive_size
         self.dataset_func = AutoregressiveDatasetFromH5 if self.autoregressive_size > 0 else LazyLoadDatasetFromH5
+
+        # A good example of h5 data file file
+        # https://cb.csail.mit.edu/cb/DIG/downloads/dig_data_files/genome_counts.h5
+        # please refer to https://github.com/jinxin-wang/RepDigDrive/blob/main/visual/data/vis_genome_counts.ipynb
         h5f = h5py.File(self.file_path, 'r')
+
+        # genome_locations is a table consist of 3 columns :
+        # array([[       1,        0,    10000],
+        #        [       1,    10000,    20000],
+        #        [       1,    20000,    30000],
+        #        ...,
+        #        [      22, 51270000, 51280000],
+        #        [      22, 51280000, 51290000],
+        #        [      22, 51290000, 51300000]])
         self.genome_locations = h5f[self.index_ds_id][:]
+
+        # mappability is a 1D numpy array :
+        # array([0.        , 0.13808968, 0.16584463, ..., 0.        , 0.        ,
+        #        0.        ])
         self.mappability = h5f[self.mappability_ds_id][:]
+
+        # !!! NOT Sure !!! I guess it it seems like mutations counts
         self.labels_lst = [h5f[l][:] for l in self.label_ids]
+
+        # !!! NOT Sure !!! I guess it it seems like mutations rate
         self.quantiles = stats.mstats.rankdata(self.labels_lst[0]) / len(self.labels_lst[0])
+
         if self.mappability_ds_id in h5f.keys():
             #self.idxs = np.where(self.mappability >= args.mappability)[0]
 
+            # filter out low mappability and hypermutated regions
             low_map_regions = self.mappability < args.mappability
             high_count_regions = self.labels_lst[0] > np.quantile(self.labels_lst[0], args.count_quantile)
             self.idxs = np.where(~low_map_regions & ~high_count_regions)[0]
@@ -42,10 +65,13 @@ class BaseDatasetGenerator:
             self.idxs = np.arange(len(self.genome_locations))
             self.below_mapp = np.zeros(0)
 
+        # one selected Roadmap Epigenomics file
         if args.track_file is not None:
             self.selected_tracks = self.load_track_selection_file(os.path.join(os.path.dirname(__file__), args.track_file))
         else:
             self.selected_tracks = np.arange(h5f[self.predictor_ds_id].shape[2])
+            
+        # !!! I don't know what predictor_ds_id is. sth. competitive with track. 
         print('Input data is of size: {}'
               .format((len(self.idxs), h5f[self.predictor_ds_id].shape[1], len(self.selected_tracks))))
 
@@ -174,6 +200,7 @@ class DatasetGenerator(BaseDatasetGenerator):
                                      self.selected_tracks,
                                      self.predictor_ds_id,
                                      self.autoregressive_size)
+        
         test_ds = self.dataset_func(self.file_path,
                                     self.label_ids,
                                     test_idxs,
@@ -183,6 +210,7 @@ class DatasetGenerator(BaseDatasetGenerator):
                                     self.selected_tracks,
                                     self.predictor_ds_id,
                                     self.autoregressive_size)
+        
         return train_ds, test_ds
 
 
@@ -239,6 +267,7 @@ class KFoldDatasetGenerator(BaseDatasetGenerator):
                                   self.selected_tracks,
                                   self.predictor_ds_id,
                                   self.autoregressive_size)
+        
         val_ds = self.dataset_func(self.file_path,
                                    self.label_ids,
                                    val_idxs,
@@ -248,6 +277,7 @@ class KFoldDatasetGenerator(BaseDatasetGenerator):
                                    self.selected_tracks,
                                    self.predictor_ds_id,
                                    self.autoregressive_size)
+        
         train_ds = self.dataset_func(self.file_path,
                                      self.label_ids,
                                      train_idxs,
