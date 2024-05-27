@@ -20,9 +20,12 @@ import gc
 import multiprocessing as mp
 import pybedtools
 
+sys.path.append('/home/j_wang@intra.igr.fr/Workspace/Algorithms/DIGDriver')
+
 # file_path = os.path.dirname(os.path.abspath(__file__))
 # sys.path.append(file_path)
 # from mappability_tools import *
+
 from DIGDriver.data_tools.mappability_tools import *
 from DIGDriver.data_tools.mutation_tools import *
 
