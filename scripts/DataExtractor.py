@@ -21,7 +21,7 @@ import multiprocessing as mp
 import pybedtools
 
 # file_path = os.path.dirname(os.path.abspath(__file__))
-sys.path.append('/home/j_wang@intra.igr.fr/Workspace/Algorithms/DIGDriver')
+# sys.path.append(file_path)
 # from mappability_tools import *
 from DIGDriver.data_tools.mappability_tools import *
 from DIGDriver.data_tools.mutation_tools import *
@@ -705,8 +705,11 @@ def add_tracks(args):
         d[:, :, shape_old[2]+i] = fetch_bw(f, chr_idx_lst, window, bins)
         # files.append(str(f))
 
-    f_track_orig = args.h5.split('.h5')[0] + '.files'
+    # f_track_orig = args.h5.split('.h5')[0] + '.files'
+    f_track_orig = args.h5 + '.files'
+
     try:
+        print(f"Openning the original files: {f_track_orig}")
         with open(f_track_orig, 'rb') as f:
             tracks_in = pkl.load(f)
     except FileNotFoundError:
