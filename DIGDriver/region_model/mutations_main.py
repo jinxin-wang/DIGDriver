@@ -24,6 +24,7 @@ from dataset_generator import *
 
 from gp_tools import *
 
+# os.environ['CUDA_VISIBLE_DEVICES'] = '1'
 
 def get_cmd_arguments():
     ap = argparse.ArgumentParser()
@@ -361,9 +362,11 @@ def main():
         best_run_accs = np.zeros(len(args.label_ids))
         best_epoch = 0
         for epoch in range(1, args.epochs + 1):
-            print('Running epoch {}/{}'.format(epoch, args.epochs))
+            print('Running epoch train {}/{}'.format(epoch, args.epochs))
             train_losses, train_accs, train_features_lst, train_pred_lst, train_true_lst = \
                 nn_trainer.train(epoch, r, autoreg=is_autoreg)
+            
+            print('Running epoch test {}/{}'.format(epoch, args.epochs))
             val_losses, val_accs, val_features_lst, val_pred_lst, val_true_lst, val_attention = \
                 nn_trainer.test(epoch, r, autoreg=is_autoreg)
 

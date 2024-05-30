@@ -1,4 +1,15 @@
-#!/bin/bash
+#!/usr/bin/bash
+
+#SBATCH --job-name=digdriver
+#SBATCH --nodes=1
+#SBATCH --mem=30gb
+#SBATCH --time=1:00:00
+#SBATCH --cpus-per-task=6
+#SBATCH --partition=gpgpuq
+#SBATCH --ntasks-per-node=6
+#SBATCH --gres=gpu:a100:1
+#SBATCH --error=/mnt/beegfs/scratch/j_wang/.tmp/gpu/digdriver.err
+#SBATCH --output=/mnt/beegfs/scratch/j_wang/.tmp/gpu/digdriver.output
 
 set -e ;
 
@@ -33,4 +44,4 @@ outdir='/mnt/beegfs/scratch/j_wang/03_Results/Dig/h5'
 # python mutations_main.py -c Pancan_SNV
 
 
-python mutations_main.py -c ${cancer} -d ${data} -o ${outdir} ; 
+python mutations_main.py -c ${cancer} -d ${data} -o ${outdir} -g '0' ; 

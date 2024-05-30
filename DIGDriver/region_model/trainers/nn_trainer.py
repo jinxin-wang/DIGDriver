@@ -106,6 +106,8 @@ class NNTrainer:
             if autoreg == True:
                 y_lst, fv_lst, attention = self.model(batch[0].to(self.device), torch.cat(batch[1], dim=1).to(self.device))
             else:
+                # print(self.device)
+                self.model = model.to(self.device)
                 y_lst, fv_lst, attention = self.model(batch[0].to(self.device))
 
             if self.get_attention_maps: all_att.append(attention.cpu().detach().numpy())

@@ -123,11 +123,12 @@ class SimpleMultiTaskResNet(nn.Module):
         self.fc2_lst = nn.ModuleList()
         self.fc3_lst = nn.ModuleList()
         for _ in range(self.task_num):
-            self.fc1_lst.append(nn.Linear(in_features=int(1024 * 13), out_features=self.fc2_dim))
+            self.fc1_lst.append(nn.Linear(in_features=int(1024 * 1250), out_features=self.fc2_dim))
             self.fc2_lst.append(nn.Linear(in_features=self.fc2_dim, out_features=self.fc3_dim))
             self.fc3_lst.append(nn.Linear(in_features=self.fc3_dim, out_features=1))
 
     def forward(self, x: Variable) -> (Variable):
+        # print(x.shape)
         x = transpose(x, 1, 2)
 
         if self.get_attention_maps:
@@ -140,25 +141,44 @@ class SimpleMultiTaskResNet(nn.Module):
             #x = x * att_x.expand_as(x)
             x = x * att_x
 
+        # print(x.get_device())
         x = F.relu(self.bn11(self.conv11(x)))
         x = F.relu(self.bn12(self.conv12(x)))
         res = x
+
+        # print(x.get_device())
         x = F.relu(self.bn21(self.conv21(x)))
         x = F.relu(self.bn22(self.conv22(x)))
-        x += res
+        x = x.clone() + res
+        # x = x + res
+        # x = x.to('cuda')
+        
         x = F.relu(self.bn3(self.conv3(x)))
         res = x
+
+        # print(x.get_device())
         x = F.relu(self.bn41(self.conv41(x)))
         x = F.relu(self.bn42(self.conv42(x)))
-        x += res
+        x = x.clone() + res
+        # x = x + res
+        # x = x.to('cuda')
+
         x = F.relu(self.bn5(self.conv5(x)))
         res = x
+
+        # print(x.get_device())
+        # print('x = F.relu(self.bn61(self.conv61(x)))')
         x = F.relu(self.bn61(self.conv61(x)))
+        # print('x = F.relu(self.bn62(self.conv62(x)))')
         x = F.relu(self.bn62(self.conv62(x)))
-        x += res
+        # print(x.get_device())
+        # x += res
+        x = x.clone() + res
+        # x = x.to('cuda')
 
-        x = x.view(-1, int(1024 * 13))
+        x = x.view(-1, int(1024 * 1250))
 
+        # print(x.get_device())
         outputs = []
         feature_vecs = []
         for i in range(self.task_num):
