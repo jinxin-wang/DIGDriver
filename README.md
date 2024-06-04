@@ -151,6 +151,80 @@ Roadmap Epigenomics计划通过系统地绘制表观基因组图谱，推动了�
 复制时序是一个关键的基因组特性，反映了基因组复制的时间和空间动态。通过理解复制时序的调控机制和功能意义，可以揭示基因组功能的复杂调控网络，并为疾病研究提供新的视角。
 </details> 
 
+# 9. Usage of source code - [DIGDriver](https://github.com/jinxin-wang/DIGDriver) : 
+
+## scripts:
+<details>
+    <summary>Data Extractor</summary>
+
+    [example](https://github.com/jinxin-wang/DIGDriver/blob/master/scripts/run_DataExtractor.sh)
+
+    ```
+    ## Determine high map regions
+    python DataExtractor.py mappability ${mapp} --out-dir ${outdir} --window ${window} ;
+
+    ## Split data window indeces into chunks
+    python DataExtractor.py splitDataIdx --base-dir ${basedir} --out-dir ${outdir} --window ${window} --chunk-size ${chunk} --overlap {overlap} --min-map ${minmap};
+
+    ## Build data chunk from saved index
+    python DataExtractor.py createChunk ${chunkIdx} --out-dir ${outdir} --ref-file ${ref} --epi-dir ${epi} --mut-file ${bed} --window ${window} --bins ${bins} --save-files ${save} --cancer-key  ${cancer} ;
+
+    ## Add mappability information for each window in an hd5 dataset
+    python DataExtractor.py addMappability ${data} ${mapp} ;
+
+    ## Add new track from a bigwig file.\nWARNING: creates a new h5 archive to avoid destructive operations.
+    python DataExtractor.py addTracks --h5 ${data} --out-file ${out} --tracks ${tracks}
+    ```
+
+</details>
+
+<details>
+    <summary>Dig Preprocess</summary>
+
+    ```
+    ## usage: DigPreprocess.py 
+
+    Preprocess mutation files for use with DIGDriver.
+
+    positional arguments:
+        countGenomeContext          Count the number of occurences of nucleotide contexts in a genome
+        addMutationContext          Annotations mutation files with sequence context, add two columns ('MUT_TYPE', 'CONTEXT') in maf file
+        addMutationFunction         Annotations mutation file with mutation function
+        annotMutationFile           Annotations mutation files with sequence context, do addMutationFunction then addMutationContext
+        preprocess_genic_model      pre-count the context counts in the regions that overlap each gene for fast genic pretrained calculation
+        preprocess_element_model    pre-count the context counts in the regions that overlap each element region for fast pretrained calculation
+        initialize_f_data           Construct a element or sites data file from f_genome_counts, add datasets: substitution_idx, full_window_si_values, full_window_si_index
+        preprocess_tiled            preprocess a tiled genome
+        
+    ```
+
+</details>
+
+<details>
+    <summary>Dig Pretrain</summary>
+
+    ```
+    ## usage: DigPretrain.py 
+
+    regionModel         Pre-train regional rate parameters from a completed CNN+GP kfold run
+    countMutations      Add mutation counts to a pretrained model
+    sequenceModel       Pre-train the sequence context parameters using pre-computed genome counts and annotated mutations. 
+    countNonc_context   pre-count the context counts in the regions that overlap each noncoding region for fast nonc pretrained calculation
+    genicModel          Pre-train the sequence context parameters using pre-computed genome counts and annotated mutations. 
+    elementModel        Pre-train the sequence context parameters using pre-computed genome counts and annotated mutations. 
+    tiledModel          Pre-train the sequence context parameters using pre-computed genome counts and annotated mutations. 
+    ```
+
+</details>
+
+<details>
+    <summary>DigDriver</summary>
+</details>
+
+<details>
+    <summary>mutationFunction</summary>
+</details>
+
 ## Web-browseable mutation maps
 Want to visually explore somatic mutation rates across the genome? Check out our [genome browser](https://resgen.io/maxsh/Cancer_Mutation_Maps/views) genome browser with maps of predicted and observed mutation counts for 37 types of cancer.  
 
