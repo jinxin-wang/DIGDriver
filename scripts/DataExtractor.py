@@ -168,6 +168,7 @@ def fetch_seq(ref_festa, chr_id, start, end, bins=None):
     """
     # print(chr_id, region_idx, window)
     ref_str = ref_festa.fetch(chr_id, start, end)
+    ## Jinxin: encoding reference nucleotide 'N': 0, 'A': 1, 'C': 2, 'G': 3, 'T': 4
     ref_seq = np.array([tr_str.index(c.upper()) for c in ref_str])
 
     if bins != -1:

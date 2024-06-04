@@ -41,7 +41,7 @@ class BaseDatasetGenerator:
         #        0.        ])
         self.mappability = h5f[self.mappability_ds_id][:]
 
-        # !!! NOT Sure !!! I guess it it seems like mutations counts
+        # h5 file contains many datasets of cohort, here are the labels
         self.labels_lst = [h5f[l][:] for l in self.label_ids]
 
         # !!! NOT Sure !!! I guess it it seems like mutations rate
@@ -65,7 +65,7 @@ class BaseDatasetGenerator:
             self.idxs = np.arange(len(self.genome_locations))
             self.below_mapp = np.zeros(0)
 
-        # one selected Roadmap Epigenomics file
+        # Roadmap Epigenomics list
         if args.track_file is not None:
             self.selected_tracks = self.load_track_selection_file(os.path.join(os.path.dirname(__file__), args.track_file))
         else:
