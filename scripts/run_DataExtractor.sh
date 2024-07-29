@@ -56,9 +56,11 @@ outdir="/mnt/beegfs/scratch/j_wang/03_Results/Dig/h5/window${window}/"
 ref='/mnt/beegfs/userdata/j_wang/Algorithm_Resources/dig/downloads/dig_data_files/hg19.fasta'
 # '--epi-dir', type=str, default='epigenomes/raw', help='path to epigenomes dir relative to base-dir'
 epi='/mnt/beegfs/userdata/j_wang/Algorithm_Resources/dig/Epigenomics/'
+
 # '--mut-file', type=str, default=None, help='path to file of mutations for a particular cancer'
 mut='/mnt/beegfs/userdata/j_wang/Algorithm_Resources/dig/downloads/mutation_files/PCAWG/ICGC_only/Biliary-AdenoCA_SNV_MNV_INDEL.ICGC.annot.txt.gz'
 bed='/mnt/beegfs/userdata/j_wang/Algorithm_Resources/dig/downloads/mutation_files/PCAWG/ICGC_only/Biliary-AdenoCA_SNV_MNV_INDEL.ICGC.annot.bed.gz'
+
 # '--repli-dir', type=str, default='replication_timing/', help='path to replication time dir relative to base-dir'
 # repli='Replication_Timing/'
 # '--window', type=int, default=10000, help='window size for mappability'
@@ -96,6 +98,7 @@ tracks='/mnt/beegfs/userdata/j_wang/Algorithm_Resources/dig/Epigenomics/E025-H3K
 inplace='False'
 # parser_i.add_argument('--out-file', type=str, help='output file name if not altering in place')
 out="/mnt/beegfs/scratch/j_wang/03_Results/Dig/h5/window${window}/002_split_data_${window}_0_0.8_add_tracks.h5"
+
 # parser_i.add_argument('--compress', default=False, action='store_true', help='Compress the archive if not altering in place?')
 # parser_i.add_argument('--remove_old', action="store_true", default='False', help='Remove original h5 archive if not altering in place?')
 

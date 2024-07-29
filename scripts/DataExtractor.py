@@ -432,6 +432,7 @@ def create_chunk(args):
     print('Extracting chunks from bigwig ...')
     files = []
     for i, f in enumerate(data.epi_lst):
+        print(f"Extracting chunks from bigwig {f}")
         d[:, :, i] = fetch_bw(f, chr_idx_lst, args.window, args.bins)
         files.append(str(f))
 
